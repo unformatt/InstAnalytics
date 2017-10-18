@@ -59,59 +59,6 @@ def InstAnalytics():
 		if 'm' in followersT: followers = followers * 1000000
 		if 'm' in followingT: following = following * 1000000
 
-		if posts > 12:
-			# Click the 'Load more' button
-			browser.find_element_by_xpath('/html/body/span/section/main/article/div/div[3]/a').click()
-
-		if posts > 24:
-			# Load more by scrolling to the bottom of the page
-			for i in range (0, (posts-24)//12):
-				browser.execute_script('window.scrollTo(0, document.body.scrollHeight)')
-				time.sleep(0.1)
-				browser.execute_script('window.scrollTo(0, 0)')
-				time.sleep(0.5)
-
-		browser.execute_script('window.scrollTo(0, 0)')
-
-		# Soup
-		soup = BeautifulSoup(browser.page_source, 'html.parser')
-
-		# User's photos statistics
-
-		links = []
-		for link in soup.html.body.span.section.main.article.findAll('a'):
-			if link.get('href')[:3] == '/p/': links.append(link.get('href'))
-
-		photosDic = []
-		pLikesT = 0
-		pCounter = 0
-
-		for link in links:
-			# Photo Id
-			pId = link.split("/")[2]
-			# Hover over a photo reveals Likes & Comments
-			time.sleep(0.2)
-			photo = browser.find_element_by_xpath('//a[contains(@href, "' + pId + '")]')
-			time.sleep(0.2)
-			ActionChains(browser).move_to_element(photo).perform()
-			# Soup
-			soup = BeautifulSoup(browser.page_source, 'html.parser')
-			# Likes
-			pLikes    = int(re.sub('[^0-9]', '', soup.html.body.span.section.main.article.findAll('div', recursive=False)[0].findAll('div', recursive=False)[0].findAll('a')[pCounter].find('ul').findAll('li', recursive=False)[0].findAll('span', recursive=False)[1].getText()))
-			# Comments
-			pComments = int(re.sub('[^0-9]', '', soup.html.body.span.section.main.article.findAll('div', recursive=False)[0].findAll('div', recursive=False)[0].findAll('a')[pCounter].find('ul').findAll('li', recursive=False)[1].findAll('span', recursive=False)[1].getText()))
-			# Photo dictionary
-			photoDic = {
-				'pId': pId,
-				'pLikes': pLikes,
-				'pComments': pComments
-			}
-			photosDic.append(photoDic)
-			# Total likes
-			pLikesT += pLikes
-			# Simple counter
-			pCounter += 1
-
 		# Dictionary
 		userDic = {
 			'username': user,
@@ -119,9 +66,7 @@ def InstAnalytics():
 			'data': {
 				'posts': posts,
 				'followers': followers,
-				'following': following,
-				'pLikesT': pLikesT,
-				'photos': photosDic
+				'following': following
 			}
 		}
 
@@ -159,17 +104,11 @@ if __name__ == '__main__':
 		with open('InstAnalytics.json', 'w') as iaFile:
 			json.dump(iaDictionary, iaFile, indent=4)
 
-	print 'Scrapping data from', users, 'account(s) every day at 11pm\n'
+	try:
+		print "InstAnalytics process started at: " + datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+		InstAnalytics()
+		print "InstAnalytics process finished at: " +  datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+	except Exception, e:
+		print 'Error', e	
 	
-	while True:
-		# Scheduled, every day at 11pm
-		if datetime.now().hour == 12:
-			print datetime.now().strftime(timeFormat),
-			try:
-				InstAnalytics()
-				time.sleep(82800) # Sleep for 23 hours
-			except Exception, e:
-				print 'Error', e
-				time.sleep(30) # Retry after 30s
-		else:
-			time.sleep(60) # Check every minute
+
