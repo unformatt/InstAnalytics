@@ -6,7 +6,6 @@ Each day, this Python script scraps the web version of Instagram, to get the num
 
 As I made it to run on my Raspberry Pi, it uses PhantomJS, a lightweight headless browser (which is perfect for a RPi, especially in terms of resources consumption).
 
-For more info, check out my [blog post](http://nbyim.com/monitor-instagram-accounts-without-using-api).
 
 ## Requirements
 
