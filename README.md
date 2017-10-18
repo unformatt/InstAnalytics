@@ -33,7 +33,10 @@ Before you run **InstAnalytics.py**, edit the `users = ['yotta_life']` list to a
 ## Cronjob
 
 Run every day at 6am:
-0 6 * * * /usr/bin/python /path/to/InstAnalytics/folder/InstaAnalytics.py
+
+[crontab -e]
+
+[0 6 * * * /usr/bin/python /path/to/InstAnalytics/folder/InstaAnalytics.py]
 
 
 ## JSON output example
