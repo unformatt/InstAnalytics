@@ -1,17 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from selenium import webdriver
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from selenium.webdriver.common.action_chains import ActionChains
+import json, os, re, sys, requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-import json, time, os, re
-
 
 
 # List of users
-users = ['yotta_life']
+users = [sys.argv[1]]
 
 
 
@@ -21,68 +17,47 @@ users = ['yotta_life']
 
 def InstAnalytics():
 
-	# Launch browser
-	browser = webdriver.PhantomJS(desired_capabilities=dcap)
+    for user in users:
 
-	for user in users:
+        # Load JSON
+        with open('InstAnalytics.json') as ia_file:
+            ia_data = json.load(ia_file)
 
-		# Load JSON
-		with open('InstAnalytics.json') as iaFile:
-			iaDictionary = json.load(iaFile)
+        # Backup JSON
+        with open('InstAnalytics_backup.json', 'w') as ia_file:
+            json.dump(ia_data, ia_file, indent=4)
 
-		# Backup JSON
-		with open('InstAnalytics_backup.json', 'w') as iaFile:
-			json.dump(iaDictionary, iaFile, indent=4)
+        page = requests.get('https://instagram.com/' + user)
 
-		# User's profile
-		browser.get('https://instagram.com/' + user)
-		time.sleep(0.5)
+        # Soup
+        soup = BeautifulSoup(page.content, 'html.parser')
+        js_str = re.match('.*?window\._sharedData =(.+?)<\/script.*?', unicode(soup.html), flags=re.I | re.M | re.S).groups()[0].strip(' ;')
+        data = json.loads(js_str)
 
-		# Soup
-		soup = BeautifulSoup(browser.page_source, 'html.parser')
+        # User's statistics
+        user_data = data['entry_data']['ProfilePage'][0]['graphql']['user']
+        posts = user_data['edge_owner_to_timeline_media']['count']
+        followers = user_data['edge_followed_by']['count']
+        following = user_data['edge_follow']['count']
 
-		# User's statistics
-		postsT     = soup.html.body.span.section.main.article.findAll('ul',recursive=False)[0].findAll('li')[0].findAll('span')[1].getText()
-		followersT = soup.html.body.span.section.main.article.findAll('ul',recursive=False)[0].findAll('li')[1].findAll('span')[1].getText()
-		followingT = soup.html.body.span.section.main.article.findAll('ul',recursive=False)[0].findAll('li')[2].findAll('span')[1].getText()
 
-		# Remove all non-numeric characters
-		posts     = int(re.sub('[^0-9]', '', postsT))
-		followers = int(re.sub('[^0-9]', '', followersT))
-		following = int(re.sub('[^0-9]', '', followingT))
+        # Dictionary
+        new_data = {
+            'username': user,
+            'date': datetime.now().strftime(timeFormat),
+            'data': {
+                'posts': posts,
+                'followers': followers,
+                'following': following
+            }
+        }
 
-		# Convert k to thousands and m to millions
-		if 'k' in postsT: 	  posts     = posts     * 1000
-		if 'k' in followersT: followers = followers * 1000
-		if 'k' in followingT: following = following * 1000
-		if 'm' in postsT: 	  posts     = posts     * 1000000
-		if 'm' in followersT: followers = followers * 1000000
-		if 'm' in followingT: following = following * 1000000
+        # Add data to JSON
+        ia_data.append(new_data)
+        with open('InstAnalytics.json', 'w') as ia_file:
+            json.dump(ia_data, ia_file, indent=4)
 
-		# Dictionary
-		userDic = {
-			'username': user,
-			'date': datetime.now().strftime(timeFormat),
-			'data': {
-				'posts': posts,
-				'followers': followers,
-				'following': following
-			}
-		}
-
-		# Add data to JSON
-		iaDictionary.append(userDic)
-		with open('InstAnalytics.json', 'w') as iaFile:
-			json.dump(iaDictionary, iaFile, indent=4)
-
-		print '|', user
-
-	# Quit browser
-	browser.quit()
-
-	# Remove ghostdriver.log
-	if os.path.isfile('ghostdriver.log') == True:
-		os.remove('ghostdriver.log')
+        print json.dumps(new_data)
 
 
 
@@ -91,24 +66,15 @@ def InstAnalytics():
 # ----------------------------------------
 
 if __name__ == '__main__':
+    timeFormat = "%Y-%m-%d"
 
-	# Desired capabilities for PhantomJS
-	dcap = dict(DesiredCapabilities.PHANTOMJS)
-	dcap['phantomjs.page.settings.userAgent'] = 'Googlebot/2.1 (+http://www.googlebot.com/bot.html)'
+    # Check if the JSON file exists, otherwise create it
+    if not os.path.isfile('InstAnalytics.json'):
+        ia_data = []
+        with open('InstAnalytics.json', 'w') as ia_file:
+            json.dump(ia_data, ia_file, indent=4)
 
-	timeFormat = "%Y-%m-%d"
-
-	# Check if the JSON file exists, otherwise create it
-	if os.path.isfile('InstAnalytics.json') == False:
-		iaDictionary = []
-		with open('InstAnalytics.json', 'w') as iaFile:
-			json.dump(iaDictionary, iaFile, indent=4)
-
-	try:
-		print "InstAnalytics process started at: " + datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-		InstAnalytics()
-		print "InstAnalytics process finished at: " +  datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-	except Exception, e:
-		print 'Error', e	
-	
-
+    #try:
+    print "InstAnalytics process started at: " + datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    InstAnalytics()
+    print "InstAnalytics process finished at: " +  datetime.now().strftime("%d-%m-%Y %H:%M:%S")
