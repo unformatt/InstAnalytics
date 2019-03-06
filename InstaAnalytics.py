@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 # List of users
-users = [sys.argv[1]]
+users = sys.argv[1].split(',')
 
 
 
